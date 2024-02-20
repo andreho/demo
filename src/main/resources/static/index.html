@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <!-- Inspired by SOURCE: https://medium.com/@ibandominguez/build-a-todo-list-app-in-a-single-html-file-using-alpine-js-cdn-1bca48597b27 -->
+    <!-- Inspired by SOURCE: https://codepen.io/ryangjchandler/pen/qBOEgjg -->
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Todo List App</title>
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
+    <link href="https://cdn.jsdelivr.net/npm/daisyui@4.7.2/dist/full.min.css" rel="stylesheet" type="text/css"/>
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+</head>
+
+<body class="font-sans">
+<div class="container" x-data="todoApp()" x-init="await tasks()">
+    <div class="navbar bg-base-100">
+        <div class="flex-1">
+            <a class="btn btn-ghost text-xl" x-text="translation.todoList"></a>
+        </div>
+        <div class="flex-none">
+            <ul class="menu menu-horizontal px-1">
+                <li>
+                    <details id="languageDetails">
+                        <summary x-text="translation.language"></summary>
+                        <ul class="p-2 bg-base-100 rounded-t-none">
+                            <template x-for="(language, index) in languages" :key="index">
+                                <li>
+                                    <button x-text="language.label" @click="changeLanguage(index)"/>
+                                </li>
+                            </template>
+                        </ul>
+                    </details>
+                </li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="flex-none">
+        <div class="w-full p-6 m-auto rounded-md shadow-md lg:max-w-xl">
+            <form class="space-y-4" x-on:submit="event.preventDefault();">
+                <div>
+                    <label for="taskName" x-text="translation.todoName"></label>
+                    <input id="taskName"
+                           type="text"
+                           class="input input-bordered w-full max-w-xs" x-model="inputName"/>
+                </div>
+                <div>
+                    <label for="priorities" x-text="translation.todoPriority">Priority: </label>
+                    <select id="priorities" class="select select-ghost w-full max-w-xs" x-model="inputPriority">
+                        <option value="LOW" x-text="translation.priorities.LOW"></option>
+                        <option value="NORMAL" x-text="translation.priorities.NORMAL"></option>
+                        <option value="URGENT" x-text="translation.priorities.URGENT"></option>
+                    </select>
+                </div>
+                <div>
+                    <label for="isDone" x-text="translation.todoDone"></label>
+                    <input id="isDone" type="checkbox" x-model.boolean="inputDone">
+                </div>
+                <div>
+                    <button type="button" class="btn btn-neutral" @click="resetState()" x-text="translation.new">
+                        New
+                    </button>
+                    <button type="button" class="btn btn-neutral" @click="createOrUpdateTask($event)"
+                            x-text="translation.save"></button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="border-separate border-spacing-2 border">
+        <table class="table">
+            <!-- head -->
+            <thead>
+            <tr>
+                <th></th>
+                <th x-text="translation.todoName"></th>
+                <th x-text="translation.todoPriority"></th>
+                <th x-text="translation.todoDone"></th>
+            </tr>
+            </thead>
+            <tbody>
+            <!-- row 1 -->
+            <template x-for="(todo, index) in todos" :key="index">
+                <tr class="hover">
+                    <th x-text="index"></th>
+                    <td x-text="todo.name"></td>
+                    <td x-text="translation.priorities[todo.priority]"></td>
+                    <td x-text="todo.done ? translation.yes : translation.no"></td>
+                    <td>
+                        <button class="btn btn-neutral" @click="selectForEditing($event, index)"
+                                x-text="translation.edit"></button>
+                    </td>
+                    <td>
+                        <button class="btn btn-error" @click="deleteTask(index)"
+                                x-text="translation.delete"></button>
+                    </td>
+                </tr>
+            </template>
+        </table>
+    </div>
+</div>
+
+<script>
+
+  function makeApiClient() {
+    const endpoint = `http://localhost:8080/api`;
+    const headers = new Headers();
+    headers.append("Content-Type", "application/json");
+
+    return {
+      async tasks() {
+        const response = await fetch(endpoint + `/tasks`, {
+          method: "GET",
+          headers: headers
+        })
+        return response.json()
+      },
+      async createTask(body) {
+        const response = await fetch(endpoint + `/task`, {
+          method: "POST",
+          headers: headers,
+          body: JSON.stringify(body)
+        })
+        return response.json()
+      },
+      async updateTask(body) {
+        const response = await fetch(endpoint + `/task`, {
+          method: "PUT",
+          headers: headers,
+          body: JSON.stringify(body)
+        })
+        return response.json()
+      },
+      async deleteTask(id) {
+        const response = await fetch(endpoint + `/task/${id}`, {
+          method: "DELETE",
+          headers: headers
+        })
+        return response.ok
+      },
+    };
+  }
+
+  function todoApp() {
+    const apiClient = makeApiClient();
+    const translations = {
+      en: {
+        language: "Language",
+        priority: "Priority",
+        priorities: {
+          LOW: "low",
+          NORMAL: "normal",
+          URGENT: "urgent"
+        },
+        todoList: "To-Do list",
+        todoName: "Name of task",
+        todoPriority: "Priority of task",
+        todoDone: "Is it done?",
+        new: "New Task",
+        save: "Save",
+        edit: "Edit",
+        delete: "Delete",
+        yes: "yes",
+        no: "no",
+        alertMissingName: "Task name must be specified!",
+        alertMissingPriority: "Task priority must be specified!",
+      },
+      de: {
+        language: "Sprache",
+        priority: "Priorität",
+        priorities: {
+          LOW: "niedrig",
+          NORMAL: "normal",
+          URGENT: "dringend"
+        },
+        todoList: "Aufgabenliste",
+        todoName: "Aufgabenname",
+        todoPriority: "Aufgabenpriorität",
+        todoDone: "Fertig?",
+        new: "Neue Aufgabe",
+        save: "Speichern",
+        edit: "Editieren",
+        delete: "Löschen",
+        yes: "ja",
+        no: "nein",
+        alertMissingName: "Name der Aufgabe muss eingegeben werden!",
+        alertMissingPriority: "Priorität der Aufgabe muss eingegeben werden!",
+      }
+    }
+
+    const initState = {
+      todos: [],
+      inputId: null,
+      inputName: "",
+      inputPriority: "LOW",
+      inputDone: false,
+
+      resetState() {
+        this.inputId = null;
+        this.inputName = "";
+        this.inputDone = false;
+      },
+
+      language: {label: "English", key: "en"},
+      languages: [
+        {label: "English", key: "en"},
+        {label: "Deutsch", key: "de"}
+      ],
+
+      translation: translations.en
+    };
+
+    const res = {
+      ...initState,
+
+      saveEnabled: true,
+
+      changeLanguage(index) {
+        this.language = this.languages[index];
+        this.translation = translations[this.language.key]
+        document.getElementById("languageDetails").removeAttribute("open");
+      },
+
+      selectForEditing(event, index) {
+        console.log("Index: ", index);
+        const rawTasks = Alpine.raw(this.todos);
+
+        console.log("Todos: ", rawTasks);
+        const task = rawTasks[index];
+
+        this.inputId = task.id;
+        this.inputName = task.name;
+        this.inputPriority = task.priority;
+        this.inputDone = task.done;
+      },
+
+      verifyInput() {
+        if (!this.inputName) {
+          alert(this.translation.alertMissingName);
+          throw new Error("Task name is incomplete.");
+        }
+        if (!this.inputPriority) {
+          alert(this.translation.alertMissingPriority);
+          throw new Error("Task priority is incomplete.");
+        }
+      },
+
+      async tasks() {
+        this.todos = await apiClient.tasks();
+      },
+
+      async createOrUpdateTask() {
+        this.verifyInput();
+
+        this.saveEnabled = false;
+        if (this.inputId === null) {
+          await this.createTask()
+        } else {
+          await this.updateTask()
+        }
+        this.saveEnabled = false;
+        this.resetState()
+      },
+
+      async createTask() {
+        const task = {
+          name: this.inputName,
+          priority: this.inputPriority,
+          done: this.inputDone,
+        }
+        const newTask = await apiClient.createTask(task)
+        if (newTask) {
+          this.todos.push(newTask);
+        }
+      },
+
+      async updateTask() {
+        const task = {
+          id: this.inputId,
+          name: this.inputName,
+          priority: this.inputPriority,
+          done: this.inputDone,
+        }
+        const taskIndex = this.todos.findIndex(elm => elm.id === this.inputId)
+        const updatedTask = await apiClient.updateTask(task)
+        if (updatedTask) {
+          this.todos[taskIndex] = updatedTask;
+        }
+      },
+      
+      async deleteTask(index) {
+        const rawTasks = Alpine.raw(this.todos);
+        const task = rawTasks[index];
+        if (await apiClient.deleteTask(task.id)) {
+          this.todos.splice(index, 1);
+        }
+      },
+    };
+    return res;
+  }
+
+</script>
+</body>
+</html>

@@ -1,0 +1,50 @@
+networks:
+  demo-network:
+    driver: bridge
+    name: demo-network
+
+services:
+  postgres:
+    image: "postgres:${POSTGRES_VERSION}"
+    restart: 'no'
+    hostname: postgres.db
+    container_name: postgres.db
+    env_file:
+      - postgres.env
+    networks:
+      - demo-network
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./postgres:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}']
+      start_period: 5s
+      interval: 3s
+      timeout: 1s
+      retries: 10
+
+  # --------------------------------------------------------------------------------------------------------------------
+  flyway:
+    image: "flyway/flyway:${FLYWAY_VERSION}"
+    command: >-
+      -configFiles=/flyway/config/flyway.properties
+      -locations=filesystem:/flyway/migrations
+      -connectRetries=60 
+      migrate
+
+    restart: 'on-failure:3'
+    hostname: flyway.db
+    container_name: flyway.db
+    env_file:
+      - postgres.env
+    networks:
+      - demo-network
+    volumes:
+      - ./flyway/config:/flyway/config:ro
+      - ./flyway/migrations:/flyway/migrations:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+# --------------------------------------------------------------------------------------------------------------------

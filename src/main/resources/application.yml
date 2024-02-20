@@ -1,0 +1,26 @@
+spring:
+  application:
+    name: demo
+  datasource:
+    name: Postgres.DB
+    driver-class-name: org.postgresql.Driver
+    url: jdbc:postgresql://localhost:5432/test?currentSchema=db,ext,public
+    username: test
+    password: test
+  flyway:
+    #++ DANGER!
+    clean-disabled: false
+    clean-on-validation-error: true
+    #-- DANGER!
+
+    fail-on-missing-locations: true
+    default-schema: ext
+    placeholders:
+      db-username: test
+  web:
+    resources:
+      chain:
+        cache: false
+
+server:
+  port: 8080
